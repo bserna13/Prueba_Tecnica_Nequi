@@ -1,75 +1,29 @@
 # Prueba Tecnica Nequi
 
-## ☁️ Arquitectura en AWS para detección de fraccionamiento de transacciones
+# Detección de Fraccionamiento Transaccional
 
-Esta arquitectura propone cómo escalar y desplegar la solución construida usando servicios gestionados de AWS. Se adapta a un flujo batch (diario o cada hora) y también puede escalar hacia tiempo real si se requiere.
+Este repositorio contiene la implementación de una solución de extremo a extremo para detectar patrones de fraccionamiento de transacciones en ventanas de 24 horas. Aprovecha servicios serverless de AWS y un modelo de clustering para generar alertas casi en tiempo real.
 
----
+## Contexto
 
-### 🧩 1. Ingesta de datos
+En comercio electrónico y banca digital, el fraccionamiento de transacciones es una táctica común de lavado de dinero o evasión de control. Nuestra propuesta:
 
-- **Amazon S3**: almacenamiento de archivos `.parquet` o `.csv` con logs de transacciones.
-- *(Opcional)* **Amazon Kinesis Data Streams**: ingestión en tiempo real si se desea monitoreo online.
+1. **Ingestión cada hora** de nuevos archivos de transacciones.  
+2. **Feature Engineering** con ventanas móviles de 24 h (conteo, suma, media, desviación, deltas de tiempo).  
+3. **Modelo de clustering** (DBSCAN/GMM) + regla heurística (> 4 tx/24 h) para clasificar comportamientos normales vs. anómalos.  
+4. **Almacenamiento** de resultados horarios y batch diario de KPIs para reporting.
 
----
+## Arquitectura
 
-### ⚙️ 2. Procesamiento distribuido
+- **Amazon S3**: bucket `raw/transactions/`  
+- **EventBridge**: dispara micro-lotes cada hora y batch diario a las 03:00 AM (Bogotá)  
+- **AWS Lambda**:  
+  - Orquestador horario  
+  - Agregador diario  
+- **AWS Glue (Spark)**: procesamiento y clustering  
+- **Amazon Redshift / RDS**: tablas `alertas_horarias` y `características_horarias`  
+- **Amazon QuickSight**: dashboard de alertas y tendencias  
+- **SNS & CloudWatch**: notificaciones y monitoreo
 
-- **AWS Glue Jobs**: ejecuta scripts de Python para calcular:
-  - Ventanas móviles de 24 horas
-  - Métricas como `count_amt`, `sum_amt`, `std_amt`, `delta` (tiempo entre transacciones)
-- *(Alternativa)* **Amazon EMR** con Spark o Dask: si se necesita más control o procesamiento intensivo.
+## Estructura del repositorio
 
----
-
-### 🤖 3. Detección de anomalías
-
-- **Amazon SageMaker**:
-  - Entrenamiento de modelos no supervisados: Isolation Forest, Local Outlier Factor (LOF), DBSCAN, Gaussian Mixture Models (GMM)
-  - Implementación de lógica basada en reglas: Z-score, umbrales de conteo y suma
-  - Despliegue en endpoints para inferencia periódica o por demanda
-
----
-
-### 🔁 4. Orquestación
-
-- **AWS Step Functions**:
-  - Automatiza el flujo de: carga de datos → procesamiento → inferencia → guardado
-- *(Alternativa)* **Amazon MWAA (Managed Workflows for Apache Airflow)**: si se prefiere usar DAGs.
-
----
-
-### 💾 5. Almacenamiento de resultados
-
-- **Amazon Redshift** o **Amazon Aurora (PostgreSQL)**:
-  - Guarda resultados de ventanas flaggeadas con columnas como:
-    - `user_id`, `merchant_id`, método de detección, score, fecha, etc.
-- **Amazon S3**:
-  - Para versionamiento y auditoría de todos los pasos del pipeline.
-
----
-
-### 📊 6. Visualización y monitoreo
-
-- **Amazon QuickSight**:
-  - Dashboard de anomalías detectadas: por método, cliente, comercio, hora del día, etc.
-- *(Opcional)* **Amazon Athena**:
-  - Consultas ad-hoc sobre los datos en S3 (sin necesidad de moverlos).
-
----
-
-### 🔐 Seguridad y monitoreo
-
-- Roles y permisos con **IAM** para acceso restringido entre servicios
-- Encriptación en tránsito (TLS) y en reposo (SSE-S3, KMS)
-- Auditoría con **AWS CloudTrail**
-- Logs y alertas con **Amazon CloudWatch**
-
----
-
-### 🧠 Ventajas de esta arquitectura
-
-- Escalable horizontalmente con AWS Glue y SageMaker
-- Modular y reutilizable por partes
-- Compatible con batch o tiempo real
-- Bajo costo de mantenimiento al usar servicios serverless o gestionados
