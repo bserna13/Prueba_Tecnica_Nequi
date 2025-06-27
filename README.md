@@ -1,29 +1,18 @@
-# Prueba Tecnica Nequi
+# Prueba Tecnica Nequi - Detección de Fraccionamiento Transaccional
 
-# Detección de Fraccionamiento Transaccional
 
-Este repositorio contiene la implementación de una solución de extremo a extremo para detectar patrones de fraccionamiento de transacciones en ventanas de 24 horas. Aprovecha servicios serverless de AWS y un modelo de clustering para generar alertas casi en tiempo real.
+Este proyecto aborda un caso realista de detección de **fraccionamiento de transacciones** dentro de una plataforma financiera, utilizando un enfoque analítico que combina reglas heurísticas, ingeniería de características y **modelos de clustering no supervisados**.
 
-## Contexto
+El objetivo es identificar patrones anómalos que podrían estar relacionados con prácticas fraudulentas, considerando ventanas móviles de 24 horas por usuario y comercio.
 
-En comercio electrónico y banca digital, el fraccionamiento de transacciones es una táctica común de lavado de dinero o evasión de control. Nuestra propuesta:
+## 🛠️ ¿Qué contiene este repositorio?
 
-1. **Ingestión cada hora** de nuevos archivos de transacciones.  
-2. **Feature Engineering** con ventanas móviles de 24 h (conteo, suma, media, desviación, deltas de tiempo).  
-3. **Modelo de clustering** (DBSCAN/GMM) + regla heurística (> 4 tx/24 h) para clasificar comportamientos normales vs. anómalos.  
-4. **Almacenamiento** de resultados horarios y batch diario de KPIs para reporting.
+Aquí encontrarás:
 
-## Arquitectura
+- Un **análisis exploratorio** de los datos, desde limpieza hasta visualización temporal.
+- Implementación de **técnicas estadísticas** y reglas de negocio para detección preliminar.
+- Aplicación de **modelos no supervisados** como DBSCAN y GMM para clasificar comportamientos de transacción.
+- Evaluación de la distribución de patrones y agrupamientos sospechosos.
+- Propuesta de una **arquitectura en AWS** para llevar el modelo a producción, con micro-lotes horarios que alimentan el sistema en casi tiempo real.
 
-- **Amazon S3**: bucket `raw/transactions/`  
-- **EventBridge**: dispara micro-lotes cada hora y batch diario a las 03:00 AM (Bogotá)  
-- **AWS Lambda**:  
-  - Orquestador horario  
-  - Agregador diario  
-- **AWS Glue (Spark)**: procesamiento y clustering  
-- **Amazon Redshift / RDS**: tablas `alertas_horarias` y `características_horarias`  
-- **Amazon QuickSight**: dashboard de alertas y tendencias  
-- **SNS & CloudWatch**: notificaciones y monitoreo
-
-## Estructura del repositorio
-
+> 📝 Puedes consultar todos los pasos detallados, visualizaciones y decisiones tomadas en el notebook/documento principal que acompaña este repositorio.
